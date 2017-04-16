@@ -1,2 +1,5 @@
 # Course8_FinalProject
-# Course8_FinalProject
+
+This project predicts the manner in which subjects performed a certain exercise. Devices such as Fitbit and Jawbone Up collect a significant amount of data relating to physical activity. The data can be analyzed to find patterns in exercise behavior, and this is useful since it can highlight incorrect methods of using exercise equipment or performing exercises. The analysis can target exercises performed incorrectly, and users can then work on correcting these exercises.
+
+The data for this project came from accelerometers on the belt, forearm, arm, and dumbbell of 6 participants. The participants performed barbell lifts correctly and incorrectly in 5 different ways. The 5 movements were: A: performing the movement correctly, B: throwing the elbows to the front (incorrect), C: lifting the dumbbell halfway (incorrect), D: lowering the dumbbell only halfway (incorrect), and E: throwing the hips to the front (incorrect). The dataset is here http://groupware.les.inf.puc-rio.br/har, the training data is here https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv, and the test data is here https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv.
