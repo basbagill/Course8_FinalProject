@@ -1,0 +1,109 @@
+---
+title: "Machine Learning Lesson 8 Final Project"
+author: "John Basbagill"
+date: "April 9, 2017"
+output: html_document
+---
+
+# Project Summary
+
+This project predicts the manner in which subjects performed a certain exercise. Devices such as Fitbit and Jawbone Up collect a significant amount of data relating to physical activity. The data can be analyzed to find patterns in exercise behavior, and this is useful since it can highlight incorrect methods of using exercise equipment or performing exercises. The analysis can target exercises performed incorrectly, and users can then work on correcting these exercises.
+
+The data for this project came from accelerometers on the belt, forearm, arm, and dumbbell of 6 participants. The participants performed barbell lifts correctly and incorrectly in 5 different ways. The 5 movements were: A: performing the movement correctly, B: throwing the elbows to the front (incorrect), C: lifting the dumbbell halfway (incorrect), D: lowering the dumbbell only halfway (incorrect), and E: throwing the hips to the front (incorrect). The dataset is here http://groupware.les.inf.puc-rio.br/har, the training data is here https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv, and the test data is here https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv.
+
+## Modeling Strategy and Results Summary
+
+The modeling strategy is to create two models: a random forest model then a generalized boosted regression model (gbm). Model results will be compared with test results to see how well they predict the 5 lifts. The primary R modeling packages used include caret, randomForest, and gbm. The results showed that the Random forest model predicted with 99% accuracy, and the gbm model predicted with 96% accuracy. The models were compared against the 20 observations in the test data, and both models predicted the results with 100% accuracy. 
+
+``` {r}
+library(readr)
+library(caret)
+library(rattle)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(gbm)
+```
+
+## Reading the data
+
+First we read in the data, removing columns with either empty characters or that contain NA or #DIV/0 entries.
+
+``` {r}
+train <- read.csv("pml-training.csv", na.strings = c("NA", "#DIV/0!", ""))
+test <- read.csv("pml-testing.csv", na.strings = c("NA", "#DIV/0!", ""))
+dim(train)
+dim(test)
+```
+
+## Cleaning the data
+
+Since the data have so many variables, let's first find ways to scope it down to a relevant number. By calling str(train) and then plotting a few columns with NAs in them, we see that many variables have a large number of NAs.
+
+``` {r}
+par(mfrow=c(2,2))
+plot(train$avg_roll_belt)
+plot(train$stddev_yaw_arm)
+plot(train$skewness_roll_belt.1)
+plot(train$min_pitch_dumbbell)
+```
+
+We will assume that relevant data is limited to those variables without a significant number of NA values and therefore limit the analysis to variables with a value for every observation. Additionally the first 7 columns include only general information about the participant names, times, etc., so these are not predictor variables and are removed.
+
+``` {r} 
+train <- train[ ,-c(1:7)]
+train <- train[, apply(train, 2, function(pred) !any(is.na(pred)))]
+dim_train <- dim(train)
+```
+
+We have reduced the variables by over 50% from 160 to `r dim_train[2]`. Next we divide the training data into training (75%) and testing (25%) subsets.
+
+## Subset training and test datasets
+
+``` {r}
+in_train <- createDataPartition(train$classe, p = .75, list = FALSE)
+train_subset <- train[in_train, ]
+test_subset <- train[-in_train, ]
+```
+
+## Random forest model
+
+We create a random forest model using the trainControl() and train() functions, then look at the results by calling the final model as well as using the predict() function.
+
+``` {r}
+set.seed(5678)
+fit <- trainControl(method = "cv", number = 5, classProbs = TRUE, verbose = TRUE)
+fit_forest <- train(classe~., data = train_subset, method = "rf", trControl = fit, verbose = 
+        FALSE)
+print(fit_forest)
+print(fit_forest$finalModel)
+pred_forest <- predict(fit_forest, newdata = test)
+print(pred_forest)
+```
+
+## Generalized boosted regression model
+
+We create a gbm using the train() function, then look at the results by calling the final model and confusion matrix as well as using the predict() function.
+
+``` {r}
+set.seed(5678)
+fit_gbm <- train(classe~., data = train_subset, method = "gbm", trControl = fit, verbose = FALSE)
+print(fit_gbm)
+print(fit_gbm$finalModel)
+print(confusionMatrix(fit_gbm))
+pred_gbm <- predict(fit_gbm, newdata = test)
+## errors_gbm <- confusionMatrix(pred_gbm, test$classe)
+print(pred_gbm)
+```
+
+## Out of sample error
+
+The out of sample error is equal to 1 minus the accuracy of the two models in the cross validation data. The accuracy values for the random forest and gbm moels were 99% and 96%, respectively, so the out of sample errors were 1% and 4%, respectively.
+
+## Summary
+
+The out of bag error rate for the random forest model was 0.63% with a sample size average of about 11,774 out of 14,718 original samples and 52 predictors. 5-fold cross validation was used with the number of trees equal to 500, the number of variables tried at each split equal to 2, and the number of variables tried at each split equal to 26. The final model resulted in 99% accuracy and had a kappa avalue of 98%. The classification errors in the confusion matrix were very small, ranging from .0007 to .017. The model was 100% accurate when tested against the 20 observations in the testing model.
+
+The gbm model held the number of trees equal to 150 and had an interaction depth equal to 3, shrinkage equal to 0.1, and n.minobsinnode equal to 10. The sample size was about 11,774 with 14,718 samples and 52 predictors. 5-fold cross validation was used with accuracy values increasing from 75% (interaction depth = 1 and number of trees = 50) to 96% (depth=1, trees=150) and kappa values increasing from 69% to 95%. 46 of the 52 predictors were found to have non-zero influence, and the average accuracy was 96%. Finally, the model was 100% accurate when compared against the 20 observations in the testing model.
+
+Therefore the random forest model performed slightly better than the gbm in terms of overall accuracy, although both models were able to correctly predict all outcomes for the 20 observations in the test data.
